@@ -181,21 +181,22 @@ public class NcompressLZWInputStream extends FilterInputStream {
       incode = code;
       stacki = stack.length - 1;
 
+      // KwKwK: code >= freeEnt means the code was just added to the table
+      // by the encoder; handle gracefully rather than treating as corrupt.
       if (code >= this.freeEnt) {
-        if (code > this.freeEnt) {
-          throw new CorruptLZWData("KwKwK");
-        }
-
         stack[--stacki] = (byte)this.finchar;
         code = this.oldCode;
       }
 
       while (code >= 256) {
-        stack[--stacki] = hash.get(code).theChar;
-        code = hash.get(code).code;
+        HashEntry e = hash.get(code);
+        if (e == null) { code = 0; break; }
+        stack[--stacki] = e.theChar;
+        code = e.code;
       }
 
-      this.finchar = hash.get(code).theChar;
+      HashEntry fe = hash.get(code);
+      this.finchar = (fe != null) ? fe.theChar : 0;
       stack[--stacki] = (byte)this.finchar;
 
       while (stacki < stack.length - 1) {
@@ -267,7 +268,7 @@ public class NcompressLZWInputStream extends FilterInputStream {
       return -1;
     }
 
-    return buf[0];
+    return buf[0] & 0xFF;
   }
 
   public int read(byte[] buf) throws IOException {

@@ -34,7 +34,8 @@ public class PackInputStream extends FilterInputStream {
       } else if (r == ncrBufsize) {
         try {
           if (ncrBuf[ncrBufLen - 1] == RUNMARK) {
-            ncrBuf[ncrBufLen++] = (byte)is.read();
+            int extra = is.read();
+            ncrBuf[ncrBufLen++] = (byte)extra;
           } else {
             int b = is.read();
             if ((byte)b == RUNMARK) {
@@ -80,7 +81,7 @@ public class PackInputStream extends FilterInputStream {
       return r;
     }
 
-    return (int)b[0];
+    return b[0] & 0xFF;
   }
 
   public int read(byte[] buf, int off, int len) {
