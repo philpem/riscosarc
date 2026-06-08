@@ -17,6 +17,7 @@ public class PackInputStream extends FilterInputStream {
   private static final int DEFAULT_BUFFER_SIZE = 1024;
   private static final byte RUNMARK = (byte)0x90;
   protected boolean eos;
+  private byte lastByte = 0;
 
   private int readNcrBuf() {
     if (ncrBufI == -1 || ncrBufI >= ncrBufLen) {
@@ -33,7 +34,8 @@ public class PackInputStream extends FilterInputStream {
       } else if (r == ncrBufsize) {
         try {
           if (ncrBuf[ncrBufLen - 1] == RUNMARK) {
-            ncrBuf[ncrBufLen++] = (byte)is.read();
+            int extra = is.read();
+            ncrBuf[ncrBufLen++] = (byte)extra;
           } else {
             int b = is.read();
             if ((byte)b == RUNMARK) {
@@ -79,7 +81,7 @@ public class PackInputStream extends FilterInputStream {
       return r;
     }
 
-    return (int)b[0];
+    return b[0] & 0xFF;
   }
 
   public int read(byte[] buf, int off, int len) {
@@ -98,11 +100,13 @@ public class PackInputStream extends FilterInputStream {
       if (ncrBuf[ncrBufI] == RUNMARK) {
         if (ncrBuf[ncrBufI + 1] == 0) {
           buf[off + l] = RUNMARK;
+          lastByte = RUNMARK;
           ncrBufI += 2;
           l++;
         } else {
+          byte runByte = (ncrBufI > 0) ? ncrBuf[ncrBufI - 1] : lastByte;
           while (l < len && ((int)(--ncrBuf[ncrBufI + 1]) & 0xFF) > 0) {
-            buf[off + l] = ncrBuf[ncrBufI - 1];
+            buf[off + l] = runByte;
             l++;
             if (ncrBuf[ncrBufI + 1] == 1) {
               ncrBufI += 2;
@@ -111,6 +115,7 @@ public class PackInputStream extends FilterInputStream {
           }
         }
       } else {
+        lastByte = ncrBuf[ncrBufI];
         buf[off + l] = ncrBuf[ncrBufI];
         l++;
         ncrBufI++;

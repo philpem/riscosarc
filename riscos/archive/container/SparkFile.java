@@ -113,13 +113,16 @@ public class SparkFile extends ArchiveFile {
           break;
         }
         if (fse.getCompressType() == SparkEntry.SPARKFS_ENDDIR) {
-          offset += 2;
           int idx = currentDir.lastIndexOf('/');
           if (idx > -1) {
             currentDir = currentDir.substring(0, idx);
           } else {
+            if (currentDir.isEmpty()) {
+              break;  // end-of-archive marker at outermost level
+            }
             currentDir = "";
           }
+          offset += 2;
           continue;
         } else {
           if (fse.isDir()) {
